@@ -1,0 +1,6 @@
+name: RangeDamage
+main: vip.creeper.mcserverplugins.rangedamage.RangeDamage
+author: July_ss
+version: 1.0.0
+commands:
+  rd:
