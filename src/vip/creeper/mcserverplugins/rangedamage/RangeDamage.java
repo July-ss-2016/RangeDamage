@@ -2,6 +2,8 @@ package vip.creeper.mcserverplugins.rangedamage;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
@@ -13,6 +15,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class RangeDamage extends JavaPlugin implements Listener {
     private String loreRegex;
@@ -24,8 +28,18 @@ public class RangeDamage extends JavaPlugin implements Listener {
         loadConfig();
 
         loreRegex = settings.getLore().replace("{range}", "\\d+");
-
+        getCommand("rd");
         Bukkit.getPluginManager().registerEvents(this, this);
+    }
+
+    public boolean onCommand(CommandSender cs, Command cmd, String lable, String[] args) {
+        if (cs.hasPermission("RangeDamage.admin") && args.length == 1 && args[0].equalsIgnoreCase("reload")) {
+            loadConfig();
+            cs.sendMessage("ok.");
+            return true;
+        }
+
+        return false;
     }
 
     private void loadConfig() {
@@ -34,12 +48,15 @@ public class RangeDamage extends JavaPlugin implements Listener {
 
         FileConfiguration config = getConfig();
 
-        settings.setMaxY(config.getInt("maxY"));
         settings.setLore(config.getString("lore"));
     }
 
     @EventHandler
     public void onEntityDamageByEntityEvent(EntityDamageByEntityEvent event) {
+        if (event.isCancelled()) {
+            return;
+        }
+
         Entity target =  event.getEntity();
         Entity damager = event.getDamager();
 
@@ -49,11 +66,21 @@ public class RangeDamage extends JavaPlugin implements Listener {
 
         LivingEntity livingEntityTarget = (LivingEntity) target;
         Player playerDamager = (Player) damager;
+        int itemDamageRange = getItemDamageRange(playerDamager.getItemInHand());
 
 
+        if (itemDamageRange > 0) {
+            List<Entity> entities = livingEntityTarget.getNearbyEntities(itemDamageRange, itemDamageRange, itemDamageRange);
+
+            for (Entity entity : entities) {
+                if (entity instanceof LivingEntity) {
+                    ((LivingEntity) entity).damage(event.getFinalDamage());
+                }
+            }
+        }
     }
 
-    public int getItemDamageRange(ItemStack item) {
+    private int getItemDamageRange(ItemStack item) {
         if (item == null || item.getType() == Material.AIR) {
             return -1;
         }
@@ -66,8 +93,15 @@ public class RangeDamage extends JavaPlugin implements Listener {
 
         for (String lore : lores) {
             if (lore.matches(loreRegex)) {
+                Pattern pattern = Pattern.compile("\\d+");
+                Matcher matcher = pattern.matcher(lore);
 
+                if (matcher.find()) {
+                    return Integer.parseInt(matcher.group());
+                }
             }
         }
+
+        return -1;
     }
 }
