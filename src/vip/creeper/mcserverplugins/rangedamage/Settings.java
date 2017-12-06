@@ -1,13 +1,13 @@
 package vip.creeper.mcserverplugins.rangedamage;
 
-public class Settings {
+class Settings {
     private String lore;
 
-    public String getLore() {
+    String getLore() {
         return lore;
     }
 
-    public void setLore(String lore) {
+    void setLore(String lore) {
         this.lore = lore;
     }
 }
